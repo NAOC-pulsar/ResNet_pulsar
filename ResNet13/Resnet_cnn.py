@@ -13,8 +13,13 @@ from pfdGenerator import ImageDataGenerator
 from utils import mkdirs
 
 class ResNet_CNN(object):
+    '''
     def __init__(self, image_size, num_epoch, batch_size, learning_rate,
                  weight_decay, num_classes, filewriter_path, checkpoint_path,
+                 num_residual_units, relu_leakiness=0.1, is_bottleneck=True, is_restore=True):
+    '''
+    def __init__(self, image_size, num_epoch, batch_size, learning_rate,
+                 weight_decay, num_classes, 
                  num_residual_units, relu_leakiness=0.1, is_bottleneck=True, is_restore=True):
         self.image_size = image_size
         self.num_epochs = num_epoch
@@ -23,18 +28,18 @@ class ResNet_CNN(object):
         self.weight_decay = weight_decay
         self.num_classes = num_classes
         self.display_step = 20 # Display training procedure
-        self.filewriter_path = filewriter_path # Display tensorboard
-        mkdirs(self.filewriter_path)
-        self.checkpoint_path = checkpoint_path
-        mkdirs(self.checkpoint_path)
+        #self.filewriter_path = filewriter_path # Display tensorboard
+        #mkdirs(self.filewriter_path)
+        #self.checkpoint_path = checkpoint_path
+        #mkdirs(self.checkpoint_path)
         self.num_residual_units = num_residual_units
         self.relu_leakiness = relu_leakiness
         self.is_bottlneck = is_bottleneck
-        if is_restore:               # Whether to restore the checkpoint
-            ckpt = tf.train.get_checkpoint_state(self.checkpoint_path)
-            self.restore_checkpoint = ckpt.model_checkpoint_path
-        else:
-            self.restore_checkpoint = ''
+        #if is_restore:               # Whether to restore the checkpoint
+            #ckpt = tf.train.get_checkpoint_state(self.checkpoint_path)
+            #self.restore_checkpoint = ckpt.model_checkpoint_path
+        #else:
+            #self.restore_checkpoint = ''
 
 
 
@@ -116,14 +121,15 @@ class ResNet_CNN(object):
                         print("Iter {}/{}, training mini-batch loss = {:.5f}, training accuracy = {:.5f}".format(
                             step * self.batch_size, train_batches_per_epoch * self.batch_size, loss, acc))
                     step += 1
+        '''
         # save checkpoint
-
-                train_generator.reset_pointer()
-                print("{} Saving checkpoint of model...".format(datetime.now()))
-                # save checkpoint of the model
-                checkpoint_name = os.path.join(self.checkpoint_path, 'epoch_' + str(epoch))
-                saver.save(sess, checkpoint_name)
-                print("{} Model checkpoint saved at {}".format(datetime.now(), checkpoint_name))
+        train_generator.reset_pointer()
+        print("{} Saving checkpoint of model...".format(datetime.now()))
+        # save checkpoint of the model
+        checkpoint_name = os.path.join(self.checkpoint_path, 'epoch_' + str(epoch))
+        saver.save(sess, checkpoint_name)
+        print("{} Model checkpoint saved at {}".format(datetime.now(), checkpoint_name))
+        '''
 
 
 rn = ResNet_CNN(
@@ -133,8 +139,8 @@ rn = ResNet_CNN(
     learning_rate=0.0001,
     weight_decay=0.002,
     num_classes=2,
-    filewriter_path="tmp/resnet13_64/tensorboard",
-    checkpoint_path="tmp/resnet13_64/checkpoints",
+    #filewriter_path="tmp/resnet13_64/tensorboard",
+    #checkpoint_path="tmp/resnet13_64/checkpoints",
     num_residual_units=1,
     relu_leakiness=0.1,
     is_bottleneck=True,
