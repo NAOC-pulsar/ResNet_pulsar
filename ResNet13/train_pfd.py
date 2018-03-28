@@ -40,11 +40,18 @@ val_file = "../datasets/pfd_data/valFvPs_shuffle.pkl"
 train_target = "../datasets/pfd_data/train_target_shuffle.pkl"
 val_target = "../datasets/pfd_data/val_target_shuffle.pkl"
 
+# train_file = "../datasets/HTRU/trainFvPs_shuffle.pkl"
+# val_file = "../datasets/HTRU/valFvPs_shuffle.pkl"
+# train_target = "../datasets/HTRU/train_target_shuffle.pkl"
+# val_target = "../datasets/HTRU/val_target_shuffle.pkl"
+
+
+
 image_size = 64
 
 # Learning params
 num_epochs = 100
-batch_size = 32
+batch_size = 16
 learning_rate = 0.0001
 weight_decay = 0.0002
 
@@ -190,7 +197,7 @@ with tf.Session(config=tf.ConfigProto(allow_soft_placement=True, log_device_plac
                 writer.add_summary(s, epoch * train_batches_per_epoch + step)
                 print("Iter {}/{}, training mini-batch loss = {:.5f}, training accuracy = {:.5f}".format(
                     step * batch_size, train_batches_per_epoch * batch_size, loss, acc))
-                val_generator.reset_pointer()
+                # val_generator.reset_pointer()
 
             step += 1
 

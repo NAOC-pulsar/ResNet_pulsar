@@ -19,8 +19,8 @@ class ResNet_CNN(object):
                  num_residual_units, relu_leakiness=0.1, is_bottleneck=True, is_restore=True):
     '''
     def __init__(self, image_size, num_epoch, batch_size, learning_rate,
-                 weight_decay, num_classes, 
-                 num_residual_units, relu_leakiness=0.1, is_bottleneck=True, is_restore=True):
+                 weight_decay, num_classes, checkpoint_path,
+                 num_residual_units, relu_leakiness=0.1, is_bottleneck=False, is_restore=True):
         self.image_size = image_size
         self.num_epochs = num_epoch
         self.batch_size = batch_size
@@ -30,22 +30,22 @@ class ResNet_CNN(object):
         self.display_step = 20 # Display training procedure
         #self.filewriter_path = filewriter_path # Display tensorboard
         #mkdirs(self.filewriter_path)
-        #self.checkpoint_path = checkpoint_path
-        #mkdirs(self.checkpoint_path)
+        self.checkpoint_path = checkpoint_path
+        mkdirs(self.checkpoint_path)
         self.num_residual_units = num_residual_units
         self.relu_leakiness = relu_leakiness
         self.is_bottlneck = is_bottleneck
-        #if is_restore:               # Whether to restore the checkpoint
-            #ckpt = tf.train.get_checkpoint_state(self.checkpoint_path)
-            #self.restore_checkpoint = ckpt.model_checkpoint_path
-        #else:
-            #self.restore_checkpoint = ''
+        if is_restore:               # Whether to restore the checkpoint
+            ckpt = tf.train.get_checkpoint_state(self.checkpoint_path)
+            self.restore_checkpoint = ckpt.model_checkpoint_path
+        else:
+            self.restore_checkpoint = ''
 
 
 
     def fit(self, X_train, Y_train):
         x = tf.placeholder(tf.float32, [None, self.image_size, self.image_size, 3], name='input')
-        y = tf.placeholder(tf.float32,[None, self.num_classes])
+        y = tf.placeholder(tf.float32, [None, self.num_classes])
 
         hps = resnet_model.HParams(batch_size=self.batch_size,
                                    num_classes=self.num_classes,
@@ -69,10 +69,17 @@ class ResNet_CNN(object):
             optimizer = tf.train.MomentumOptimizer(self.learning_rate, 0.9)
             train_op = optimizer.apply_gradients(grads_and_vars=gradients)
 
+        for gradient, var in gradients:
+            tf.summary.histogram(var.name + '/gradient', gradient)
+            # Add the variables we train to the summary
+        for var in var_list:
+            tf.summary.histogram(var.name, var)
+        # Add the loss to the summary
+        tf.summary.scalar('cross_entropy', cost)
         with tf.name_scope("accuracy"):
             prediction = tf.equal(tf.argmax(output, 1), tf.argmax(y, 1))
             accuracy = tf.reduce_mean(tf.cast(prediction, tf.float32))
-        # Add the accuracy to the summary
+            # Add gradients to summary
         tf.summary.scalar('accuracy', accuracy)
         # Merge all summaries together
         merged_summary = tf.summary.merge_all()
@@ -99,11 +106,11 @@ class ResNet_CNN(object):
         #writer = tf.summary.FileWriter(self.filewriter_path)
 
         # Initialize an saver for store model checkpoints
-        #saver = tf.train.Saver()
+        saver = tf.train.Saver()
         '''
-
+        saver = tf.train.Saver()
         #Initialize the data generator seperately for the training set,didn't initialize validation set
-        train_generator = ImageDataGenerator(X_train, Y_train, scale_size=(self.image_size, self.image_size), nb_classes=self.num_classes)
+        train_generator = ImageDataGenerator(X_train, Y_train, shuffle=True, scale_size=(self.image_size, self.image_size), nb_classes=self.num_classes)
         # Get the number of training steps per epoch
         train_batches_per_epoch = np.floor(train_generator.data_size / self.batch_size).astype(np.int16)
 
@@ -112,8 +119,8 @@ class ResNet_CNN(object):
             sess.run(tf.global_variables_initializer())
             #writer.add_graph(sess.graph)
 
-            #if not self.restore_checkpoint == '':
-                #saver.restore(sess, self.restore_checkpoint)
+            if not self.restore_checkpoint == '':
+                saver.restore(sess, self.restore_checkpoint)
 
             print("{} Start training...".format(datetime.now()))
             #print("{} Open Tensorboard :tensorboard --logdir {} --host localhost --port 6006".format(datetime.now(),self.filewriter_path))
@@ -133,6 +140,7 @@ class ResNet_CNN(object):
                         print("Iter {}/{}, training mini-batch loss = {:.5f}, training accuracy = {:.5f}".format(
                             step * self.batch_size, train_batches_per_epoch * self.batch_size, loss, acc))
                     step += 1
+                train_generator.reset_pointer()
         '''
         # save checkpoint
         train_generator.reset_pointer()
@@ -147,17 +155,17 @@ class ResNet_CNN(object):
 rn = ResNet_CNN(
     image_size=64,
     num_epoch=100,
-    batch_size=32,
+    batch_size=16,
     learning_rate=0.0001,
-    weight_decay=0.2,
+    weight_decay=0.0002,
     num_classes=2,
     #filewriter_path="tmp/resnet13_64/tensorboard",
-    #checkpoint_path="tmp/resnet13_64/checkpoints",
+    checkpoint_path="tmp/resnet13_64/checkpoints",
     num_residual_units=1,
     relu_leakiness=0.1,
-    is_bottleneck=True,
+    is_bottleneck=False,
     is_restore=True
 )
-train_file = "./dataset/pfd_data/trainFvPs_shuffle_2.pkl"
-train_target = "./dataset/pfd_data/train_target_shuffle_2.pkl"
+train_file = "../datasets/pfd_data/trainFvPs_shuffle.pkl"
+train_target = "../datasets/pfd_data/train_target_shuffle.pkl"
 rn.fit(train_file, train_target)
