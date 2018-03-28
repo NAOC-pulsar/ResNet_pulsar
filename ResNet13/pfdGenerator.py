@@ -1,6 +1,5 @@
 # encoding=utf-8
 import numpy as np
-import cv2
 import pickle
 import os
 
@@ -33,7 +32,8 @@ class ImageDataGenerator:
 
     def load_pickle(self, picklepath):
         with open(picklepath, "rb") as file:
-            data = pickle.load(file, encoding='iso-8859-1')
+            #data = pickle.load(file, encoding='iso-8859-1')
+            data = pickle.load(file)
 
         return data
 
@@ -102,11 +102,16 @@ class ImageDataGenerator:
             [batch_size, self.scale_size[0], self.scale_size[1], 3])  # the last parameter is image channel
         for i in range(len(paths)):
 
+            '''
             # rescale image
             try:
+                import cv2
                 img = cv2.resize(paths[i], (self.scale_size[0], self.scale_size[0]))
             except:
                 print(paths[i])
+            '''
+            #print '*** paths[i][:,:,0]:', paths[i][:,:,0]
+            img = paths[i]
             img = img.astype(np.float32)
 
             images[i] = img

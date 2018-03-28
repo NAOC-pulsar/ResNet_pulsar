@@ -68,6 +68,16 @@ class ResNet_CNN(object):
             gradients = list(zip(gradients, var_list))
             optimizer = tf.train.MomentumOptimizer(self.learning_rate, 0.9)
             train_op = optimizer.apply_gradients(grads_and_vars=gradients)
+
+        with tf.name_scope("accuracy"):
+            prediction = tf.equal(tf.argmax(output, 1), tf.argmax(y, 1))
+            accuracy = tf.reduce_mean(tf.cast(prediction, tf.float32))
+        # Add the accuracy to the summary
+        tf.summary.scalar('accuracy', accuracy)
+        # Merge all summaries together
+        merged_summary = tf.summary.merge_all()
+
+        '''
         # Add gradients to summary
         for gradient, var in gradients:
             tf.summary.histogram(var.name + '/gradient', gradient)
@@ -84,10 +94,13 @@ class ResNet_CNN(object):
         tf.summary.scalar('accuracy', accuracy)
         # Merge all summaries together
         merged_summary = tf.summary.merge_all()
+
         # Initialize the FileWriter
-        writer = tf.summary.FileWriter(self.filewriter_path)
+        #writer = tf.summary.FileWriter(self.filewriter_path)
+
         # Initialize an saver for store model checkpoints
-        saver = tf.train.Saver()
+        #saver = tf.train.Saver()
+        '''
 
         #Initialize the data generator seperately for the training set,didn't initialize validation set
         train_generator = ImageDataGenerator(X_train, Y_train, scale_size=(self.image_size, self.image_size), nb_classes=self.num_classes)
@@ -97,14 +110,13 @@ class ResNet_CNN(object):
         # Start Tensorflow session
         with tf.Session(config=tf.ConfigProto(allow_soft_placement=True, log_device_placement=True)) as sess:
             sess.run(tf.global_variables_initializer())
-            writer.add_graph(sess.graph)
+            #writer.add_graph(sess.graph)
 
-            if not self.restore_checkpoint == '':
-                saver.restore(sess, self.restore_checkpoint)
+            #if not self.restore_checkpoint == '':
+                #saver.restore(sess, self.restore_checkpoint)
 
             print("{} Start training...".format(datetime.now()))
-            print("{} Open Tensorboard :tensorboard --logdir {} --host localhost --port 6006".format(datetime.now(),
-                                                                                                 self.filewriter_path))
+            #print("{} Open Tensorboard :tensorboard --logdir {} --host localhost --port 6006".format(datetime.now(),self.filewriter_path))
             for epoch in range(self.num_epochs):
                 step = 1
                 while step < train_batches_per_epoch:
@@ -117,7 +129,7 @@ class ResNet_CNN(object):
                     # Generate summary with the current batch of data and write to file
                     if step % self.display_step == 0:
                         loss, acc, s = sess.run([cost, accuracy, merged_summary], feed_dict=feed_dict)
-                        writer.add_summary(s, epoch * train_batches_per_epoch + step)
+                        #writer.add_summary(s, epoch * train_batches_per_epoch + step)
                         print("Iter {}/{}, training mini-batch loss = {:.5f}, training accuracy = {:.5f}".format(
                             step * self.batch_size, train_batches_per_epoch * self.batch_size, loss, acc))
                     step += 1
@@ -137,7 +149,7 @@ rn = ResNet_CNN(
     num_epoch=100,
     batch_size=32,
     learning_rate=0.0001,
-    weight_decay=0.002,
+    weight_decay=0.2,
     num_classes=2,
     #filewriter_path="tmp/resnet13_64/tensorboard",
     #checkpoint_path="tmp/resnet13_64/checkpoints",
@@ -146,6 +158,6 @@ rn = ResNet_CNN(
     is_bottleneck=True,
     is_restore=True
 )
-train_file = "../datasets/pfd_data/trainFvPs.pkl"
-train_target = "../datasets/pfd_data/train_target.pkl"
+train_file = "./dataset/pfd_data/trainFvPs_shuffle_2.pkl"
+train_target = "./dataset/pfd_data/train_target_shuffle_2.pkl"
 rn.fit(train_file, train_target)
