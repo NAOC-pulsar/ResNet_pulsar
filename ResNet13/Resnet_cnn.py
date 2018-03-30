@@ -9,7 +9,7 @@ import numpy as np
 import tensorflow as tf
 import resnet_model
 # from datagenerator import ImageDataGenerator
-from pfdGenerator import ImageDataGenerator
+#from pfdGenerator import ImageDataGenerator
 from utils import mkdirs
 
 class ResNet_CNN(object):
@@ -41,33 +41,6 @@ class ResNet_CNN(object):
         # else:
         #     self.restore_checkpoint = ''
 
-    def load_pickle(self, picklepath):
-        with open(picklepath, "rb") as file:
-            #data = pickle.load(file, encoding='iso-8859-1')
-            data = pickle.load(file)
-
-        return data
-
-    def read_class_list(self, class_list, target_list):
-        """
-        Scan the image file and get the image paths and labels
-        """
-        self.images = []
-        self.labels = []
-        arr_img = self.load_pickle(class_list)
-        target = self.load_pickle(target_list)
-        self.labels = np.array(target)
-        new_img = np.array(arr_img)
-
-        for i in range(self.labels.size):
-            data_FvP = np.zeros([64, 64, 3])
-            data_FvP[:, :, 0] = new_img[i]
-            # data_FvP[:, :, 1] = new_img[i]
-            # data_FvP[:, :, 2] = new_img[i]
-            self.images.append(data_FvP)
-
-            # store total number of data
-        self.data_size = len(self.labels)
 
     def fit(self, X_train, Y_train):
         x = tf.placeholder(tf.float32, [None, self.image_size, self.image_size, 3], name='input')
@@ -156,25 +129,56 @@ class ResNet_CNN(object):
             label = np.argmax(result, 1)
             print(label)
 
+def load_pickle(picklepath):
+    with open(picklepath, "rb") as file:
+        #data = pickle.load(file, encoding='iso-8859-1')
+        data = pickle.load(file)
 
-rn = ResNet_CNN(
-    image_size=64,
-    num_epoch=100,
-    batch_size=16,
-    learning_rate=0.0001,
-    weight_decay=0.0002,
-    num_classes=2,
-    #filewriter_path="tmp/resnet13_64/tensorboard",
-    checkpoint_path="tmp/resnet13_64/checkpoints",
-    num_residual_units=1,
-    relu_leakiness=0.1,
-    is_bottleneck=False,
-    is_restore=True
-)
-train_file = "../datasets/pfd_data/trainFvPs_shuffle_2.pkl"
-train_target = "../datasets/pfd_data/train_target_shuffle_2.pkl"
+    return data
 
-rn.read_class_list(train_file, train_target)
-print(rn.labels)
-# rn.fit(rn.images, rn.labels)
-rn.predict(rn.images)
+def read_class_list(class_list, target_list):
+    """
+    Scan the image file and get the image paths and labels
+    """
+    images = []
+    labels = []
+    arr_img = load_pickle(class_list)
+    target = load_pickle(target_list)
+    labels = np.array(target)
+    new_img = np.array(arr_img)
+
+    for i in range(labels.size):
+        data_FvP = np.zeros([64, 64, 3])
+        data_FvP[:, :, 0] = new_img[i]
+        # data_FvP[:, :, 1] = new_img[i]
+        # data_FvP[:, :, 2] = new_img[i]
+        images.append(data_FvP)
+
+        # store total number of data
+    data_size = len(labels)
+    return images, labels
+
+
+if __name__ == '__main__':
+
+    rn = ResNet_CNN(
+        image_size=64,
+        num_epoch=100,
+        batch_size=16,
+        learning_rate=0.0001,
+        weight_decay=0.0002,
+        num_classes=2,
+        #filewriter_path="tmp/resnet13_64/tensorboard",
+        checkpoint_path="tmp/resnet13_64/checkpoints",
+        num_residual_units=1,
+        relu_leakiness=0.1,
+        is_bottleneck=False,
+        is_restore=True
+    )
+    train_file = "../datasets/pfd_data/trainFvPs_shuffle_2.pkl"
+    train_target = "../datasets/pfd_data/train_target_shuffle_2.pkl"
+
+    images, labels = read_class_list(train_file, train_target)
+    print(labels)
+    # rn.fit(rn.images, rn.labels)
+    rn.predict(images)
