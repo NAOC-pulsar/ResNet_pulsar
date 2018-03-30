@@ -1,6 +1,6 @@
 import os
 import sys
-
+import pickle
 sys.path.append("..")
 sys.path.append("../..")
 
@@ -35,13 +35,39 @@ class ResNet_CNN(object):
         self.num_residual_units = num_residual_units
         self.relu_leakiness = relu_leakiness
         self.is_bottlneck = is_bottleneck
-        if is_restore:               # Whether to restore the checkpoint
-            ckpt = tf.train.get_checkpoint_state(self.checkpoint_path)
-            self.restore_checkpoint = ckpt.model_checkpoint_path
-        else:
-            self.restore_checkpoint = ''
+        # if is_restore:               # Whether to restore the checkpoint
+        #     ckpt = tf.train.get_checkpoint_state(self.checkpoint_path)
+        #     self.restore_checkpoint = ckpt.model_checkpoint_path
+        # else:
+        #     self.restore_checkpoint = ''
 
+    def load_pickle(self, picklepath):
+        with open(picklepath, "rb") as file:
+            #data = pickle.load(file, encoding='iso-8859-1')
+            data = pickle.load(file)
 
+        return data
+
+    def read_class_list(self, class_list, target_list):
+        """
+        Scan the image file and get the image paths and labels
+        """
+        self.images = []
+        self.labels = []
+        arr_img = self.load_pickle(class_list)
+        target = self.load_pickle(target_list)
+        self.labels = np.array(target)
+        new_img = np.array(arr_img)
+
+        for i in range(self.labels.size):
+            data_FvP = np.zeros([64, 64, 3])
+            data_FvP[:, :, 0] = new_img[i]
+            # data_FvP[:, :, 1] = new_img[i]
+            # data_FvP[:, :, 2] = new_img[i]
+            self.images.append(data_FvP)
+
+            # store total number of data
+        self.data_size = len(self.labels)
 
     def fit(self, X_train, Y_train):
         x = tf.placeholder(tf.float32, [None, self.image_size, self.image_size, 3], name='input')
@@ -69,50 +95,17 @@ class ResNet_CNN(object):
             optimizer = tf.train.MomentumOptimizer(self.learning_rate, 0.9)
             train_op = optimizer.apply_gradients(grads_and_vars=gradients)
 
-        for gradient, var in gradients:
-            tf.summary.histogram(var.name + '/gradient', gradient)
-            # Add the variables we train to the summary
-        for var in var_list:
-            tf.summary.histogram(var.name, var)
-        # Add the loss to the summary
-        tf.summary.scalar('cross_entropy', cost)
+
         with tf.name_scope("accuracy"):
             prediction = tf.equal(tf.argmax(output, 1), tf.argmax(y, 1))
             accuracy = tf.reduce_mean(tf.cast(prediction, tf.float32))
-            # Add gradients to summary
-        tf.summary.scalar('accuracy', accuracy)
-        # Merge all summaries together
-        merged_summary = tf.summary.merge_all()
 
-        '''
-        # Add gradients to summary
-        for gradient, var in gradients:
-            tf.summary.histogram(var.name + '/gradient', gradient)
-        # Add the variables we train to the summary
-        for var in var_list:
-            tf.summary.histogram(var.name, var)
-        # Add the loss to summary
-        tf.summary.scalar('cross_entropy', cost)
-        # Evaluation op: Accuracy of the model
-        with tf.name_scope("accuracy"):
-            prediction = tf.equal(tf.argmax(output, 1), tf.argmax(y, 1))
-            accuracy = tf.reduce_mean(tf.cast(prediction, tf.float32))
-        # Add the accuracy to the summary
-        tf.summary.scalar('accuracy', accuracy)
-        # Merge all summaries together
-        merged_summary = tf.summary.merge_all()
 
-        # Initialize the FileWriter
-        #writer = tf.summary.FileWriter(self.filewriter_path)
-
-        # Initialize an saver for store model checkpoints
-        saver = tf.train.Saver()
-        '''
         saver = tf.train.Saver()
         #Initialize the data generator seperately for the training set,didn't initialize validation set
         train_generator = ImageDataGenerator(X_train, Y_train, shuffle=True, scale_size=(self.image_size, self.image_size), nb_classes=self.num_classes)
         # Get the number of training steps per epoch
-        train_batches_per_epoch = np.floor(train_generator.data_size / self.batch_size).astype(np.int16)
+        train_batches_per_epoch = np.floor(self.data_size / self.batch_size).astype(np.int16)
 
         # Start Tensorflow session
         with tf.Session(config=tf.ConfigProto(allow_soft_placement=True, log_device_placement=True)) as sess:
@@ -135,7 +128,8 @@ class ResNet_CNN(object):
 
                     # Generate summary with the current batch of data and write to file
                     if step % self.display_step == 0:
-                        loss, acc, s = sess.run([cost, accuracy, merged_summary], feed_dict=feed_dict)
+                        # loss, acc, s = sess.run([cost, accuracy, merged_summary], feed_dict=feed_dict)
+                        loss, acc = sess.run([cost, accuracy], feed_dict=feed_dict)
                         #writer.add_summary(s, epoch * train_batches_per_epoch + step)
                         print("Iter {}/{}, training mini-batch loss = {:.5f}, training accuracy = {:.5f}".format(
                             step * self.batch_size, train_batches_per_epoch * self.batch_size, loss, acc))
@@ -148,8 +142,19 @@ class ResNet_CNN(object):
         # save checkpoint of the model
         checkpoint_name = os.path.join(self.checkpoint_path, 'epoch_' + str(epoch))
         saver.save(sess, checkpoint_name)
-        print("{} Model checkpoint saved at {}".format(datetime.now(), checkpoint_name))
-        '''
+        print("{} Model checkpoint saved at {}".format(datetime.now(), checkpoint_name))   '''
+    def predict(self, predict_X):
+        ckpt = tf.train.get_checkpoint_state('tmp/resnet13_64/checkpoints/')
+        imgs = predict_X
+        with tf.Session() as sess:
+            new_saver = tf.train.import_meta_graph(ckpt.model_checkpoint_path + '.meta')
+            new_saver.restore(sess, ckpt.model_checkpoint_path)
+            tf.get_default_graph().as_graph_def()
+            x = sess.graph.get_tensor_by_name('input:0')
+            y = sess.graph.get_tensor_by_name('output:0')
+            result = sess.run(y, feed_dict={x: imgs})
+            label = np.argmax(result, 1)
+            print(label)
 
 
 rn = ResNet_CNN(
@@ -166,6 +171,10 @@ rn = ResNet_CNN(
     is_bottleneck=False,
     is_restore=True
 )
-train_file = "../datasets/pfd_data/trainFvPs_shuffle.pkl"
-train_target = "../datasets/pfd_data/train_target_shuffle.pkl"
-rn.fit(train_file, train_target)
+train_file = "../datasets/pfd_data/trainFvPs_shuffle_2.pkl"
+train_target = "../datasets/pfd_data/train_target_shuffle_2.pkl"
+
+rn.read_class_list(train_file, train_target)
+print(rn.labels)
+# rn.fit(rn.images, rn.labels)
+rn.predict(rn.images)

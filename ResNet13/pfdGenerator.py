@@ -15,48 +15,20 @@ wrote my own little generator.
 
 
 class ImageDataGenerator:
-    def __init__(self, class_list, target_list, horizontal_flip=False, shuffle=False
+    def __init__(self, images, labels, shuffle=False
                  , scale_size=(64, 64), nb_classes=2):  # mean=np.array([127.5]),np.array(,,)
 
         # Init params
-        self.horizontal_flip = horizontal_flip
-        self.n_classes = nb_classes
-        self.shuffle = shuffle
-        self.scale_size = scale_size
-        self.pointer = 0
 
-        self.read_class_list(class_list, target_list)
+        self.images = images
+        self.labels = labels
+        self.scale_size = scale_size
+        self.shuffle = shuffle
+        self.pointer = 0
+        self.n_classes = nb_classes
 
         if self.shuffle:
             self.shuffle_data()
-
-    def load_pickle(self, picklepath):
-        with open(picklepath, "rb") as file:
-            #data = pickle.load(file, encoding='iso-8859-1')
-            data = pickle.load(file)
-
-        return data
-
-    def read_class_list(self, class_list, target_list):
-        """
-        Scan the image file and get the image paths and labels
-        """
-        self.images = []
-        self.labels = []
-        arr_img = self.load_pickle(class_list)
-        target = self.load_pickle(target_list)
-        self.labels = np.array(target)
-        new_img = np.array(arr_img)
-
-        for i in range(self.labels.size):
-            data_FvP = np.zeros([64, 64, 3])
-            data_FvP[:, :, 0] = new_img[i]
-            # data_FvP[:, :, 1] = new_img[i]
-            # data_FvP[:, :, 2] = new_img[i]
-            self.images.append(data_FvP)
-
-            # store total number of data
-        self.data_size = len(self.labels)
 
     def shuffle_data(self):
         """
