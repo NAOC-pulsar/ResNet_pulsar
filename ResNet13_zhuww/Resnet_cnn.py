@@ -1,26 +1,31 @@
 import os
 import sys
 import pickle
-sys.path.append("..")
-sys.path.append("../..")
+#sys.path.append("..")
+#sys.path.append("../..")
 
 from datetime import datetime
 import numpy as np
 import tensorflow as tf
 import resnet_model
 # from datagenerator import ImageDataGenerator
-#from pfdGenerator import ImageDataGenerator
-from utils import mkdirs
+from pfdGenerator import ImageDataGenerator
+import ubc_AI
+AI_PATH = '/'.join(ubc_AI.__file__.split('/')[:-1])
+
+def mkdirs(path):
+    if not os.path.exists(path):
+        os.makedirs(path)
+
 
 class ResNet_CNN(object):
     '''
-    def __init__(self, image_size, num_epoch, batch_size, learning_rate,
-                 weight_decay, num_classes, filewriter_path, checkpoint_path,
-                 num_residual_units, relu_leakiness=0.1, is_bottleneck=True, is_restore=True):
+    a class to be merged and used by ubc_AI.
     '''
     def __init__(self, image_size, num_epoch, batch_size, learning_rate,
-                 weight_decay, num_classes, checkpoint_path,
-                 num_residual_units, relu_leakiness=0.1, is_bottleneck=False, is_restore=True):
+                 weight_decay, num_classes, num_residual_units, relu_leakiness=0.1, 
+                 is_bottleneck=False, is_restore=True, 
+                 checkpoint_path=AI_PATH+"/TF_checkpoints/resnet13_64/checkpoints"):
         self.image_size = image_size
         self.num_epochs = num_epoch
         self.batch_size = batch_size
@@ -31,15 +36,17 @@ class ResNet_CNN(object):
         #self.filewriter_path = filewriter_path # Display tensorboard
         #mkdirs(self.filewriter_path)
         self.checkpoint_path = checkpoint_path
-        mkdirs(self.checkpoint_path)
+        #mkdirs(self.checkpoint_path)
         self.num_residual_units = num_residual_units
         self.relu_leakiness = relu_leakiness
         self.is_bottlneck = is_bottleneck
-        # if is_restore:               # Whether to restore the checkpoint
-        #     ckpt = tf.train.get_checkpoint_state(self.checkpoint_path)
-        #     self.restore_checkpoint = ckpt.model_checkpoint_path
-        # else:
-        #     self.restore_checkpoint = ''
+
+
+        if is_restore:               # Whether to restore the checkpoint
+            ckpt = tf.train.get_checkpoint_state(self.checkpoint_path)
+            self.restore_checkpoint = ckpt.model_checkpoint_path
+        else:
+            self.restore_checkpoint = ''
 
 
     def fit(self, X_train, Y_train):
@@ -78,7 +85,8 @@ class ResNet_CNN(object):
         #Initialize the data generator seperately for the training set,didn't initialize validation set
         train_generator = ImageDataGenerator(X_train, Y_train, shuffle=True, scale_size=(self.image_size, self.image_size), nb_classes=self.num_classes)
         # Get the number of training steps per epoch
-        train_batches_per_epoch = np.floor(self.data_size / self.batch_size).astype(np.int16)
+        data_size = len(Y_train)
+        train_batches_per_epoch = np.floor(data_size / self.batch_size).astype(np.int16)
 
         # Start Tensorflow session
         with tf.Session(config=tf.ConfigProto(allow_soft_placement=True, log_device_placement=True)) as sess:
@@ -88,8 +96,7 @@ class ResNet_CNN(object):
             if not self.restore_checkpoint == '':
                 saver.restore(sess, self.restore_checkpoint)
 
-            print("{} Start training...".format(datetime.now()))
-            #print("{} Open Tensorboard :tensorboard --logdir {} --host localhost --port 6006".format(datetime.now(),self.filewriter_path))
+            #print("{} Start training...".format(datetime.now()))
             for epoch in range(self.num_epochs):
                 step = 1
                 while step < train_batches_per_epoch:
@@ -104,21 +111,22 @@ class ResNet_CNN(object):
                         # loss, acc, s = sess.run([cost, accuracy, merged_summary], feed_dict=feed_dict)
                         loss, acc = sess.run([cost, accuracy], feed_dict=feed_dict)
                         #writer.add_summary(s, epoch * train_batches_per_epoch + step)
-                        print("Iter {}/{}, training mini-batch loss = {:.5f}, training accuracy = {:.5f}".format(
-                            step * self.batch_size, train_batches_per_epoch * self.batch_size, loss, acc))
+                        #print("Iter {}/{}, training mini-batch loss = {:.5f}, training accuracy = {:.5f}".format(
+                            #step * self.batch_size, train_batches_per_epoch * self.batch_size, loss, acc))
                     step += 1
                 train_generator.reset_pointer()
-        '''
-        # save checkpoint
-        train_generator.reset_pointer()
-        print("{} Saving checkpoint of model...".format(datetime.now()))
-        # save checkpoint of the model
-        checkpoint_name = os.path.join(self.checkpoint_path, 'epoch_' + str(epoch))
-        saver.save(sess, checkpoint_name)
-        print("{} Model checkpoint saved at {}".format(datetime.now(), checkpoint_name))   '''
-    def predict(self, predict_X):
-        ckpt = tf.train.get_checkpoint_state('tmp/resnet13_64/checkpoints/')
-        imgs = predict_X
+
+    def predict_proba(self, predict_X):
+        ckpt = tf.train.get_checkpoint_state(AI_PATH+'/TF_checkpoints/resnet13_64/checkpoints/')
+        #Xshape =predict_X.shape
+        #X_flatten = predict_X.flatten()
+        #Xsize = X_flatten.size
+        #Xdata = np.vstack((X_flatten, np.zeros(Xsize), np.zeros(Xsize)))
+        Xdata = np.array(predict_X)
+        #print 'Xdata.shape:', Xdata.shape
+        imgs = Xdata.reshape(-1, 64, 64, 3)
+        #imgs = predict_X
+        
         with tf.Session() as sess:
             new_saver = tf.train.import_meta_graph(ckpt.model_checkpoint_path + '.meta')
             new_saver.restore(sess, ckpt.model_checkpoint_path)
@@ -126,8 +134,15 @@ class ResNet_CNN(object):
             x = sess.graph.get_tensor_by_name('input:0')
             y = sess.graph.get_tensor_by_name('output:0')
             result = sess.run(y, feed_dict={x: imgs})
-            label = np.argmax(result, 1)
-            print(label)
+            #label = np.argmax(result, 1)
+            #print(label)
+        return result
+
+    def predict(self, predict_X):
+        result = self.predict_proba(predict_X)
+        label = np.argmax(result, 1)
+        return label
+
 
 def load_pickle(picklepath):
     with open(picklepath, "rb") as file:
@@ -161,6 +176,8 @@ def read_class_list(class_list, target_list):
 
 if __name__ == '__main__':
 
+    print AI_PATH
+
     rn = ResNet_CNN(
         image_size=64,
         num_epoch=100,
@@ -169,7 +186,7 @@ if __name__ == '__main__':
         weight_decay=0.0002,
         num_classes=2,
         #filewriter_path="tmp/resnet13_64/tensorboard",
-        checkpoint_path="tmp/resnet13_64/checkpoints",
+        checkpoint_path=AI_PATH+"/TF_checkpoints/resnet13_64/checkpoints",
         num_residual_units=1,
         relu_leakiness=0.1,
         is_bottleneck=False,
@@ -181,4 +198,4 @@ if __name__ == '__main__':
     images, labels = read_class_list(train_file, train_target)
     print(labels)
     # rn.fit(rn.images, rn.labels)
-    rn.predict(images)
+    print rn.predict(images)
