@@ -20,7 +20,15 @@ class ResNet_predict():
         self.image_size = 64
         self.mean = np.array([127.5])
         self.pb_path = "model/frozen_model.pb"
-        self.predict(path)
+        self.imgs = self.get_data(path)
+
+        with tf.Graph().as_default():
+            output_graph_def = tf.GraphDef()
+
+            with open(self.pb_path, "rb") as f:
+                output_graph_def.ParseFromString(f.read())
+                tf.import_graph_def(output_graph_def, name="")
+                self.predict()
 
     def get_data(self, path):
         img = cv2.imread(path).astype('float64')
@@ -30,25 +38,16 @@ class ResNet_predict():
         imgs0[0, :, :, 0] = img[0, :, :, 0]
         return imgs0
 
-    def predict(self, path):
-        imgs = self.get_data(path)
-        pb_file_path = "./model/frozen_model.pb"
+    def predict(self):
 
-        with tf.Graph().as_default():
-            output_graph_def = tf.GraphDef()
-
-            with open(pb_file_path, "rb") as f:
-                output_graph_def.ParseFromString(f.read())
-                _ = tf.import_graph_def(output_graph_def, name="")
-
-            with tf.Session() as sess:
+        with tf.Session() as sess:
                 # init = tf.global_variable_initializer()
                 # sess.run(init)
-                input_x = sess.graph.get_tensor_by_name("input:0")
-                output_label = sess.graph.get_tensor_by_name("output:0")
-                result = sess.run(output_label, feed_dict={input_x: imgs})
-                label = np.argmax(result, 1)
-                self.result = label
+            input_x = sess.graph.get_tensor_by_name("input:0")
+            output_label = sess.graph.get_tensor_by_name("output:0")
+            result = sess.run(output_label, feed_dict={input_x: self.imgs})
+            label = np.argmax(result, 1)
+            self.result = label
 
 if __name__ == '__main__':
     path = "dataset/1.bmp"
