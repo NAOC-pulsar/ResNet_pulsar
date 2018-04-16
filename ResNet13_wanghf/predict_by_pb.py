@@ -55,12 +55,11 @@ class ResNet_predict(object):
         return self.result
 
 if __name__ == '__main__':
-    from threadit import threadit
+    #from threadit import threadit
     path = "dataset/1.bmp"
     resnet_pre = ResNet_predict()
-    #result = resnet_pre.predict(path)
     inputarray = [[path] for i in range(10)]
-    result = threadit(resnet_pre.predict, inputarray)
+    #result = threadit(resnet_pre.predict, inputarray)
     print(result)
 
 
