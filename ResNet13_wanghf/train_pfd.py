@@ -17,6 +17,7 @@ import sys
 
 sys.path.append("..")
 sys.path.append("../..")
+
 import time
 import numpy as np
 import tensorflow as tf
@@ -35,10 +36,10 @@ from sklearn.metrics import confusion_matrix, f1_score, recall_score, classifica
 # train_file = "path/mnist/train.txt"
 # val_file = "path/mnist/valid.txt"
 
-train_file = "../datasets/pfd_data/trainFvPs_shuffle_2.pkl"
-val_file = "../datasets/pfd_data/valFvPs_shuffle_2.pkl"
-train_target = "../datasets/pfd_data/train_target_shuffle_2.pkl"
-val_target = "../datasets/pfd_data/val_target_shuffle_2.pkl"
+train_file = "../../datasets/pfd_data/trainFvPs_shuffle_2.pkl"
+val_file = "../../datasets/pfd_data/valFvPs_shuffle_2.pkl"
+train_target = "../../datasets/pfd_data/train_target_shuffle_2.pkl"
+val_target = "../../datasets/pfd_data/val_target_shuffle_2.pkl"
 
 # train_file = "../datasets/HTRU/trainFvPs_shuffle_2.pkl"
 # val_file = "../datasets/HTRU/valFvPs_shuffle_2.pkl"
@@ -109,6 +110,7 @@ var_list = [
 ]
 
 for v in var_list:
+    print("output all the trainable variable")
     print(v)
 
 # Train op

@@ -8,7 +8,7 @@ import tensorflow as tf
 import shutil
 import os.path
 from tensorflow.python.framework import graph_util
-import  sys
+import sys
 sys.path.append("..")
 sys.path.append("../..")
 # output_graph = './model/add_model.pb'
